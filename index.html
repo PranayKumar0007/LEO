@@ -373,7 +373,7 @@
             <div class="bubble">
               <div class="meta"><span>LEO</span><span>local workbench</span></div>
               <div class="markdown-content">
-                <p>Ask a question or upload a PDF, DOCX, or text file. The router will select a local expert model and use retrieved document context when relevant.</p>
+                <p>Ask a question or upload a document (PDF, DOCX, TXT), handwritten note, photo, or engineering diagram (PNG, JPG, WEBP). LEO uses local OCR & Vision models alongside domain experts.</p>
               </div>
             </div>
           </div>
@@ -381,8 +381,9 @@
       </section>
       <div class="composer">
         <form class="composer-inner" id="form">
-          <label class="file-button" for="file" title="Attach document">+</label>
-          <input id="file" type="file" accept=".pdf,.docx,.txt,.md,.csv">
+          <label class="file-button" for="file" title="Attach document/image">+</label>
+          <input id="file" type="file" accept=".pdf,.docx,.txt,.md,.csv,.png,.jpg,.jpeg,.bmp,.tiff,.webp">
+
           <textarea id="input" placeholder="Message LEO..." rows="1"></textarea>
           <button id="send" type="submit">Send</button>
         </form>

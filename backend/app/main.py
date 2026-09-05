@@ -48,8 +48,9 @@ async def health() -> dict:
 @app.post("/api/documents")
 async def upload_document(file: UploadFile = File(...)) -> dict:
     suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in {".pdf", ".docx", ".txt", ".md", ".csv"}:
-        raise HTTPException(status_code=400, detail="Supported file types: PDF, DOCX, TXT, MD, CSV")
+    allowed_types = {".pdf", ".docx", ".txt", ".md", ".csv", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"}
+    if suffix not in allowed_types:
+        raise HTTPException(status_code=400, detail="Supported file types: PDF, DOCX, TXT, MD, CSV, PNG, JPG, JPEG, BMP, TIFF, WEBP")
 
     uploads_dir = settings.data_dir / "uploads"
     uploads_dir.mkdir(parents=True, exist_ok=True)

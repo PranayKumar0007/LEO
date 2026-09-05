@@ -95,5 +95,9 @@ def _mentions_documents(text: str) -> bool:
     lowered = text.lower()
     return any(
         term in lowered
-        for term in ["pdf", "doc", "document", "file", "uploaded", "attached", "company", "policy", "manual"]
+        for term in [
+            "pdf", "doc", "document", "file", "uploaded", "attached", "company", "policy", "manual",
+            "image", "photo", "diagram", "note", "ocr", "handwritten", "chart", "drawing", "scan", "sketch"
+        ]
     )
+
