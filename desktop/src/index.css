@@ -1,0 +1,243 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────
+   DARK THEME (default)
+   Near-black surfaces, violet accent, Codex palette
+───────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  /* Surfaces */
+  --bg-app:      #0a0a0a;
+  --bg-rail:     #111112;
+  --bg-surface:  #161618;
+  --bg-elevated: #1c1c1e;
+  --bg-input:    #161618;
+
+  /* Borders — low contrast, sparse */
+  --border:      #232323;
+  --border-mid:  #2a2a2a;
+  --border-strong: #383838;
+
+  /* Text */
+  --text-1:      #f5f5f5;
+  --text-2:      #a1a1aa;
+  --text-3:      #52525b;
+
+  /* Accent — neutral blue (Codex-style, not purple) */
+  --accent:      #4493f8;
+  --accent-dim:  rgba(68,147,248,0.1);
+  --accent-fg:   #ffffff;
+
+  /* Domain semantic colours — keep hue, dark-mode variants */
+  --badge-code:       #38bdf8;
+  --badge-code-bg:    rgba(56,189,248,0.12);
+  --badge-code-border:rgba(56,189,248,0.25);
+
+  --badge-math:       #a78bfa;
+  --badge-math-bg:    rgba(167,139,250,0.12);
+  --badge-math-border:rgba(167,139,250,0.25);
+
+  --badge-medical:    #34d399;
+  --badge-medical-bg: rgba(52,211,153,0.12);
+  --badge-medical-border:rgba(52,211,153,0.25);
+
+  --badge-general:    #fbbf24;
+  --badge-general-bg: rgba(251,191,36,0.12);
+  --badge-general-border:rgba(251,191,36,0.25);
+
+  /* Status */
+  --status-ok:   #22c55e;
+  --status-err:  #f87171;
+  --status-warn: #fb923c;
+
+  /* Air-gap banner */
+  --airgap-text: #6ee7b7;
+  --airgap-bg:   rgba(52,211,153,0.06);
+  --airgap-border:rgba(52,211,153,0.18);
+
+  /* Code alias (legacy, keep for components) */
+  --code:    #38bdf8;
+  --math:    #a78bfa;
+  --medical: #34d399;
+  --general: #fbbf24;
+
+  /* Primary alias (legacy) */
+  --primary:     #4493f8;
+  --primary-dim: rgba(68,147,248,0.1);
+}
+
+/* ─────────────────────────────────────────
+   LIGHT THEME
+   Near-white surfaces, same violet accent
+───────────────────────────────────────── */
+[data-theme="light"] {
+  /* Surfaces */
+  --bg-app:      #fafafa;
+  --bg-rail:     #ffffff;
+  --bg-surface:  #f5f5f6;
+  --bg-elevated: #efefef;
+  --bg-input:    #ffffff;
+
+  /* Borders */
+  --border:      #e5e5e7;
+  --border-mid:  #d4d4d8;
+  --border-strong:#a1a1aa;
+
+  /* Text */
+  --text-1:      #0d0d0d;
+  --text-2:      #6b6b73;
+  --text-3:      #a1a1aa;
+
+  /* Accent — neutral blue (Codex-style, not purple) */
+  --accent:      #0969da;
+  --accent-dim:  rgba(9,105,218,0.08);
+  --accent-fg:   #ffffff;
+
+  /* Domain badges — deeper, legible on white */
+  --badge-code:       #0284c7;
+  --badge-code-bg:    rgba(2,132,199,0.08);
+  --badge-code-border:rgba(2,132,199,0.2);
+
+  --badge-math:       #7c3aed;
+  --badge-math-bg:    rgba(124,58,237,0.08);
+  --badge-math-border:rgba(124,58,237,0.2);
+
+  --badge-medical:    #059669;
+  --badge-medical-bg: rgba(5,150,105,0.08);
+  --badge-medical-border:rgba(5,150,105,0.2);
+
+  --badge-general:    #b45309;
+  --badge-general-bg: rgba(180,83,9,0.08);
+  --badge-general-border:rgba(180,83,9,0.2);
+
+  /* Status */
+  --status-ok:   #16a34a;
+  --status-err:  #dc2626;
+  --status-warn: #ea580c;
+
+  /* Air-gap banner */
+  --airgap-text: #065f46;
+  --airgap-bg:   rgba(5,150,105,0.06);
+  --airgap-border:rgba(5,150,105,0.18);
+
+  /* Code alias */
+  --code:    #0284c7;
+  --math:    #7c3aed;
+  --medical: #059669;
+  --general: #b45309;
+
+  /* Primary alias */
+  --primary:     #0969da;
+  --primary-dim: rgba(9,105,218,0.08);
+}
+
+/* ─────────────────────────────────────────
+   BASE RESET
+───────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--bg-app);
+    color: var(--text-1);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+                 Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    overflow: hidden;
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+
+  /* Thin, unobtrusive scrollbar */
+  ::-webkit-scrollbar       { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+}
+
+/* ─────────────────────────────────────────
+   UTILITY CLASSES
+───────────────────────────────────────── */
+.selectable      { user-select: text; }
+.selectable-text { user-select: text; }
+
+/* Domain badge utility */
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid;
+}
+.badge-code    { color: var(--badge-code);    background: var(--badge-code-bg);    border-color: var(--badge-code-border); }
+.badge-math    { color: var(--badge-math);    background: var(--badge-math-bg);    border-color: var(--badge-math-border); }
+.badge-medical { color: var(--badge-medical); background: var(--badge-medical-bg); border-color: var(--badge-medical-border); }
+.badge-general { color: var(--badge-general); background: var(--badge-general-bg); border-color: var(--badge-general-border); }
+
+/* ─────────────────────────────────────────
+   ANIMATIONS
+───────────────────────────────────────── */
+
+/* Inspector slide-over */
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideOutRight {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+.drawer-enter { animation: slideInRight 0.2s ease forwards; }
+.drawer-exit  { animation: slideOutRight 0.18s ease forwards; }
+
+/* Blinking cursor (kept for fallback) */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Streaming dot pulse in rail */
+@keyframes pulse {
+  0%, 100% { opacity: 1;   transform: scale(1);   }
+  50%       { opacity: 0.6; transform: scale(1.2); }
+}
+
+/* Spinner for loading states */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Thinking indicator — gentle opacity breathe */
+@keyframes thinking-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 1; }
+}
+
+/* Streamed token fade-in + micro-lift */
+@keyframes token-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.token-animate {
+  animation: token-in 160ms ease-out both;
+}
+
+/* Shiki transparent background override */
+.shiki, .shiki pre { background: transparent !important; }
+
+/* KaTeX — inherit text color from CSS tokens so math is readable in dark + light */
+.katex { color: var(--text-1); font-size: 1em; }
+.katex-display { margin: 0.8em 0; overflow-x: auto; }
+

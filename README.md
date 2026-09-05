@@ -189,9 +189,15 @@ uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 
 ### 5. Open the UI
 
-Navigate to: **http://127.0.0.1:8000**
-
-The interface will auto-load and connect to the backend API.
+- **Browser UI:** Open [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- **Desktop UI (Tauri 2):**
+  ```powershell
+  cd desktop
+  npm run dev          # Vite preview at http://localhost:1420
+  # or
+  npm run tauri dev    # Native desktop window
+  ```
+  See [desktop/README.md](file:///d:/hackathons/sih2/LEO/desktop/README.md) for full desktop build and configuration instructions.
 
 ---
 
