@@ -3,14 +3,12 @@ import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { IconRail } from "../sidebar/IconRail";
 import { InspectorDrawer } from "../context/InspectorDrawer";
 import { ChatPage } from "../../pages/ChatPage";
-import { DocumentsPage } from "../../pages/Documents";
 import { ModelsPage } from "../../pages/Models";
 import { SystemPage } from "../../pages/System";
 import { SettingsPage } from "../../pages/Settings";
 
 const PAGE_MAP: Record<string, React.ReactNode> = {
   chat:      <ChatPage />,
-  documents: <DocumentsPage />,
   models:    <ModelsPage />,
   system:    <SystemPage />,
   settings:  <SettingsPage />,

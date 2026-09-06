@@ -1,6 +1,7 @@
-import { MessageSquare, FileText, Cpu, Heart, Settings, Zap } from "lucide-react";
+import { MessageSquare, Cpu, Heart, Settings, Zap } from "lucide-react";
 import { useWorkspaceStore, ActivePage } from "../../stores/workspaceStore";
 import { useChatStore } from "../../stores/chatStore";
+import { ChatHistoryList } from "./ChatHistoryList";
 import type { LucideIcon } from "lucide-react";
 
 type NavItem = {
@@ -12,7 +13,6 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { id: "chat",      Icon: MessageSquare, label: "Chat",     title: "AI Chat" },
-  { id: "documents", Icon: FileText,      label: "Docs",     title: "Documents" },
   { id: "models",    Icon: Cpu,           label: "Models",   title: "Models" },
   { id: "system",    Icon: Heart,         label: "Health",   title: "System Health" },
   { id: "settings",  Icon: Settings,      label: "Settings", title: "Settings" },
@@ -113,6 +113,14 @@ export function IconRail() {
           );
         })}
       </nav>
+
+      {/* Chat history — visible when rail is expanded */}
+      {railExpanded && (
+        <>
+          <div style={{ height: 1, background: "var(--border)", margin: "0 12px" }} />
+          <ChatHistoryList />
+        </>
+      )}
 
       {/* Bottom: streaming badge */}
       {isStreaming && (

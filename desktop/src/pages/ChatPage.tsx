@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Search, Trash2, FileText, Pill, Calculator, Code2, BarChart2, Globe, ArrowUp, Square } from "lucide-react";
+import { Search, Trash2, FileText, Pill, Calculator, Code2, BarChart2, Globe, ArrowUp, Square, Plus } from "lucide-react";
 import { useChatStore } from "../stores/chatStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
+import { useDocumentStore } from "../stores/documentStore";
 import { MessageItem } from "../components/chat/MessageItem";
+import { AttachMenu } from "../components/attachments/AttachMenu";
+import { AttachmentChip } from "../components/attachments/AttachmentChip";
 import type { LucideIcon } from "lucide-react";
 
 type HeroPrompt = {
@@ -47,11 +50,14 @@ const HERO_PROMPTS: HeroPrompt[] = [
 
 export function ChatPage() {
   const [input, setInput] = useState("");
+  const [attachOpen, setAttachOpen] = useState(false);
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearConversation } = useChatStore();
   const { toggleInspector } = useWorkspaceStore();
+  const { documents, selectedDocIds, toggleDocSelection } = useDocumentStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const textRef   = useRef<HTMLTextAreaElement>(null);
   const abortRef  = useRef<AbortController | null>(null);
+  const attachBtnRef = useRef<HTMLButtonElement>(null);
 
   const isEmpty = messages.length === 0;
 
@@ -68,12 +74,24 @@ export function ChatPage() {
     el.style.height = Math.min(Math.max(el.scrollHeight, 56), 200) + "px";
   }, [input]);
 
+  /* Ctrl+U shortcut to open attach menu */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "u") {
+        e.preventDefault();
+        setAttachOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const send = useCallback(() => {
     const q = input.trim();
     if (!q || isStreaming) return;
     setInput("");
-    sendMessage(q, undefined, (ctrl) => { abortRef.current = ctrl; });
-  }, [input, isStreaming, sendMessage]);
+    sendMessage(q, undefined, (ctrl) => { abortRef.current = ctrl; }, selectedDocIds);
+  }, [input, isStreaming, sendMessage, selectedDocIds]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -230,6 +248,26 @@ export function ChatPage() {
           transition: "border-color 0.15s",
           overflow: "hidden",
         }}>
+          {/* Attachment chips (selected documents) */}
+          {selectedDocIds.length > 0 && (
+            <div style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              padding: "8px 12px 4px",
+            }}>
+              {documents
+                .filter((d) => selectedDocIds.includes(d.document_id))
+                .map((doc) => (
+                  <AttachmentChip
+                    key={doc.document_id}
+                    document={doc}
+                    onDismiss={(id) => toggleDocSelection(id)}
+                  />
+                ))}
+            </div>
+          )}
+
           {/* Top: textarea — text starts top-left, exactly like Codex "Do anything" */}
           <textarea
             ref={textRef}
@@ -266,15 +304,45 @@ export function ChatPage() {
             padding: "6px 10px 8px",
             borderTop: "1px solid var(--border)",
           }}>
-            {/* Left: keyboard hint */}
-            <span style={{
-              fontSize: 11,
-              color: "var(--text-3)",
-              paddingLeft: 4,
-              userSelect: "none",
-            }}>
-              ↵ Enter to send · Shift+Enter for newline
-            </span>
+            {/* Left: attach button + keyboard hint */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
+              <button
+                ref={attachBtnRef}
+                onClick={() => setAttachOpen((v) => !v)}
+                title="Attach documents"
+                style={{
+                  background: attachOpen ? "var(--accent-dim)" : "none",
+                  border: attachOpen ? "1px solid rgba(68,147,248,0.25)" : "1px solid transparent",
+                  borderRadius: 7,
+                  width: 30, height: 30,
+                  cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: attachOpen ? "var(--accent)" : "var(--text-3)",
+                  transition: "background 0.12s, color 0.12s, border-color 0.12s",
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
+                  if (!attachOpen) (e.currentTarget as HTMLButtonElement).style.color = "var(--text-2)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!attachOpen) (e.currentTarget as HTMLButtonElement).style.color = "var(--text-3)";
+                }}
+              >
+                <Plus size={16} strokeWidth={2} />
+              </button>
+              <AttachMenu
+                open={attachOpen}
+                onClose={() => setAttachOpen(false)}
+                anchorRef={attachBtnRef}
+              />
+              <span style={{
+                fontSize: 11,
+                color: "var(--text-3)",
+                userSelect: "none",
+              }}>
+                ↵ Enter to send · Shift+Enter for newline
+              </span>
+            </div>
 
             {/* Right: stop or send */}
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>

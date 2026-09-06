@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { useSettingsStore, AppTheme } from "../stores/settingsStore";
 import { useChatStore } from "../stores/chatStore";
+import { useHistoryStore } from "../stores/historyStore";
 import { Settings, Server, Palette, Trash2, ShieldCheck, Check } from "lucide-react";
 
 export const SettingsPage: React.FC = () => {
   const { backendUrl, theme, setBackendUrl, setTheme } = useSettingsStore();
   const { clearConversations } = useChatStore();
+  const { clearAll: clearCustomTitles } = useHistoryStore();
 
   const [inputUrl, setInputUrl] = useState(backendUrl);
   const [savedUrl, setSavedUrl] = useState(false);
@@ -20,6 +22,7 @@ export const SettingsPage: React.FC = () => {
   const handleClearChats = () => {
     if (window.confirm("Are you sure you want to clear all local chat history?")) {
       clearConversations();
+      clearCustomTitles();
       setClearedChats(true);
       setTimeout(() => setClearedChats(false), 2000);
     }
