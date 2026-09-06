@@ -1,1 +1,13 @@
 .env.example
+__pycache__/
+*.pyc
+
+# Desktop
+desktop/node_modules/
+desktop/dist/
+desktop/src-tauri/target/
+
+
+.venv/
+data/uploads/
+
