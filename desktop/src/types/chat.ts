@@ -19,4 +19,6 @@ export interface Conversation {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  projectId?: string | null;
+  projectName?: string | null;
 }

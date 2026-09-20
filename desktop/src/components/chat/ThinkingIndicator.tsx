@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-type Phase = "thinking" | "routing" | "retrieving" | "generating";
+type Phase = "thinking" | "routing" | "retrieving" | "generating" | "agent";
 
 interface ThinkingIndicatorProps {
   phase: Phase;
@@ -28,6 +28,12 @@ const PHRASES: Record<Phase, (model?: string | null) => string[]> = {
     "Drafting a response…",
     model ? `${model} is composing…` : "Composing…",
     "Writing…",
+  ],
+  agent: () => [
+    "Executing agentic workflow…",
+    "Inspecting repository workspace…",
+    "Planning & modifying files…",
+    "Running verification tests…",
   ],
 };
 

@@ -22,7 +22,8 @@ export function HistoryItem({ conversation }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isActive = activeConversationId === conversation.id;
-  const displayTitle = getTitle(conversation.id, conversation.title) || "New Chat";
+  const rawTitle = getTitle(conversation.id, conversation.title) || "New Chat";
+  const displayTitle = conversation.projectName ? `${conversation.projectName} > ${rawTitle}` : rawTitle;
 
   // Focus input when renaming starts
   useEffect(() => {

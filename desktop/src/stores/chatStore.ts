@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Conversation, Message } from "../types/chat";
 import type { ModelConfig, RetrievedChunk, RouteDecision } from "../types/backend";
 import { streamChat as defaultStreamChat } from "../api/chat";
+import { streamAgent } from "../api/agent";
 
 // ─────────────────────────────────────────────
 // Types
@@ -18,7 +19,7 @@ interface ChatState {
 
   // Streaming / active-request state
   isStreaming: boolean;
-  streamPhase: "thinking" | "routing" | "retrieving" | "generating" | null;
+  streamPhase: "thinking" | "routing" | "retrieving" | "generating" | "agent" | null;
   abortController: AbortController | null;
   currentRoute: string | null;           // domain string for InspectorDrawer
   activeModel: string | null;            // model name string
@@ -35,11 +36,19 @@ interface ChatState {
     onCtrl?: OnCtrlFn,
     documentIds?: string[]
   ) => Promise<void>;
+
+  sendAgentMessage: (
+    content: string,
+    workspacePath: string,
+    projectInfo?: { id: string; name: string },
+    onCtrl?: OnCtrlFn
+  ) => Promise<void>;
+
   stopStreaming: () => void;
   clearConversation: () => void;
 
   // multi-conversation management
-  createNewConversation: () => string;
+  createNewConversation: (projectId?: string | null, projectName?: string | null) => string;
   selectConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   clearConversations: () => void;
@@ -91,8 +100,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     getActiveConversation,
 
-    // ── createNewConversation ────────────────────────────────
-    createNewConversation: () => {
+    createNewConversation: (projectId, projectName) => {
       const newId = `conv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const newConv: Conversation = {
         id: newId,
@@ -100,6 +108,8 @@ export const useChatStore = create<ChatState>((set, get) => {
         messages: [],
         createdAt: Date.now(),
         updatedAt: Date.now(),
+        projectId: projectId ?? null,
+        projectName: projectName ?? null,
       };
       set((s) => {
         const next = [newConv, ...s.conversations];
@@ -117,7 +127,6 @@ export const useChatStore = create<ChatState>((set, get) => {
       return newId;
     },
 
-    // ── selectConversation ───────────────────────────────────
     selectConversation: (id) => {
       const conv = get().conversations.find((c) => c.id === id);
       const last = [...(conv?.messages ?? [])].reverse().find((m) => m.role === "assistant");
@@ -131,7 +140,6 @@ export const useChatStore = create<ChatState>((set, get) => {
       });
     },
 
-    // ── deleteConversation ───────────────────────────────────
     deleteConversation: (id) => {
       set((s) => {
         const next = s.conversations.filter((c) => c.id !== id);
@@ -146,7 +154,6 @@ export const useChatStore = create<ChatState>((set, get) => {
       });
     },
 
-    // ── clearConversations ───────────────────────────────────
     clearConversations: () => {
       save([]);
       set({
@@ -160,7 +167,6 @@ export const useChatStore = create<ChatState>((set, get) => {
       });
     },
 
-    // ── clearConversation (active) ────────────────────────────
     clearConversation: () => {
       set((s) => {
         const next = s.conversations.map((c) =>
@@ -178,7 +184,6 @@ export const useChatStore = create<ChatState>((set, get) => {
       });
     },
 
-    // ── stopStreaming ────────────────────────────────────────
     stopStreaming: () => {
       get().abortController?.abort();
       set((s) => {
@@ -202,7 +207,6 @@ export const useChatStore = create<ChatState>((set, get) => {
       });
     },
 
-    // ── sendMessage ──────────────────────────────────────────
     sendMessage: async (content, streamFn, onCtrl, documentIds = []) => {
       const chatFn = streamFn ?? defaultStreamChat;
 
@@ -215,7 +219,6 @@ export const useChatStore = create<ChatState>((set, get) => {
       const userMsg: Message = { id: userMsgId, role: "user", content, timestamp: Date.now() };
       const asstMsg: Message = { id: asstMsgId, role: "assistant", content: "", timestamp: Date.now(), isStreaming: true };
 
-      // inject messages
       set((s) => {
         const next = s.conversations.map((c) => {
           if (c.id !== convId) return c;
@@ -241,7 +244,6 @@ export const useChatStore = create<ChatState>((set, get) => {
         };
       });
 
-      // build history (exclude the two just added)
       const currentConv = get().conversations.find((c) => c.id === convId);
       const history = (currentConv?.messages ?? [])
         .filter((m) => m.id !== userMsgId && m.id !== asstMsgId)
@@ -352,6 +354,172 @@ export const useChatStore = create<ChatState>((set, get) => {
                         retrievedChunks: chunks.length ? [...chunks] : undefined,
                         isStreaming: false,
                       }
+                ),
+              };
+            });
+            save(next);
+            const active = next.find((c) => c.id === convId);
+            return {
+              conversations: next,
+              messages: active?.messages ?? [],
+              isStreaming: false,
+              streamPhase: null,
+              abortController: null,
+            };
+          });
+        },
+      });
+    },
+
+    sendAgentMessage: async (content, workspacePath, projectInfo, onCtrl) => {
+      let convId = get().activeConversationId;
+      if (!convId) convId = get().createNewConversation(projectInfo?.id, projectInfo?.name);
+
+      const userMsgId = `msg-u-${Date.now()}`;
+      const asstMsgId = `msg-a-${Date.now() + 1}`;
+
+      const userMsg: Message = { id: userMsgId, role: "user", content, timestamp: Date.now() };
+      const asstMsg: Message = { id: asstMsgId, role: "assistant", content: "", timestamp: Date.now(), isStreaming: true };
+
+      set((s) => {
+        const next = s.conversations.map((c) => {
+          if (c.id !== convId) return c;
+          const isFirst = c.messages.length === 0;
+          return {
+            ...c,
+            title: isFirst ? content.slice(0, 40) : c.title,
+            messages: [...c.messages, userMsg, asstMsg],
+            updatedAt: Date.now(),
+          };
+        });
+        save(next);
+        const active = next.find((c) => c.id === convId);
+        return {
+          conversations: next,
+          messages: active?.messages ?? [],
+          isStreaming: true,
+          streamPhase: "agent",
+          currentRoute: "code",
+          activeModel: "qwen2.5-coder:3b",
+          retrievedChunks: [],
+          error: null,
+        };
+      });
+
+      const controller = new AbortController();
+      set({ abortController: controller });
+      onCtrl?.(controller);
+
+      let text = `📂 **Workspace**: \`${workspacePath}\`\n🎯 **Goal**: ${content}\n\n`;
+
+      const updateAsst = () => {
+        set((s) => {
+          const next = s.conversations.map((c) => {
+            if (c.id !== convId) return c;
+            return {
+              ...c,
+              messages: c.messages.map((m) =>
+                m.id !== asstMsgId ? m : { ...m, content: text }
+              ),
+            };
+          });
+          const active = next.find((c) => c.id === convId);
+          return {
+            conversations: next,
+            messages: active?.messages ?? [],
+          };
+        });
+      };
+
+      updateAsst();
+
+      await streamAgent({
+        workspacePath,
+        goal: content,
+        signal: controller.signal,
+        onEvent: (event) => {
+          const type = event.type;
+          const data = event.data;
+
+          if (type === "repository_context") {
+            text += `🔍 **Discovered Repository**:\n`;
+            if (data.project_name) text += `- Project: \`${data.project_name}\`\n`;
+            if (data.tech_stack?.length) text += `- Tech Stack: ${data.tech_stack.join(", ")}\n`;
+            if (data.languages?.length) text += `- Languages: ${data.languages.join(", ")}\n`;
+            text += `\n`;
+            updateAsst();
+          } else if (type === "plan_created") {
+            text += `📋 **Implementation Plan**:\n`;
+            if (Array.isArray(data.plan)) {
+              data.plan.forEach((item: any) => {
+                text += `- [ ] **Task ${item.step_number}**: ${item.title} - *${item.description}*\n`;
+              });
+            }
+            text += `\n`;
+            updateAsst();
+          } else if (type === "todo_updated") {
+            if (data.current_task) {
+              text += `⚡ **Working on**: ${data.current_task.title}\n`;
+              updateAsst();
+            }
+          } else if (type === "file_written") {
+            if (data.path) {
+              text += `✏️ Modified file: \`${data.path}\` (${data.bytes_written || 0} bytes)\n`;
+              updateAsst();
+            }
+          } else if (type === "command_finished") {
+            if (data.command) {
+              text += `💻 Command: \`${data.command}\` (exit code: ${data.exit_code})\n`;
+              updateAsst();
+            }
+          } else if (type === "verification_result") {
+            text += `\n🧪 **Verification**: ${data.details}\n\n`;
+            updateAsst();
+          } else if (type === "agent_answer_start") {
+            text += `---\n\n💡 **LEO Agent Response**:\n\n`;
+            updateAsst();
+          } else if (type === "agent_answer_token") {
+            text += data.token || "";
+            updateAsst();
+          } else if (type === "agent_finished") {
+            text += `\n\n✅ **Agentic Task Completed** (${data.iterations} iterations completed).\n`;
+            updateAsst();
+          } else if (type === "agent_error") {
+            text += `\n⚠️ **Error**: ${data.error}\n`;
+            updateAsst();
+          }
+        },
+        onError: (err) => {
+          set((s) => {
+            const next = s.conversations.map((c) => {
+              if (c.id !== convId) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id !== asstMsgId ? m : { ...m, isStreaming: false, error: err.message }
+                ),
+              };
+            });
+            save(next);
+            const active = next.find((c) => c.id === convId);
+            return {
+              conversations: next,
+              messages: active?.messages ?? [],
+              isStreaming: false,
+              streamPhase: null,
+              abortController: null,
+              error: err.message,
+            };
+          });
+        },
+        onDone: () => {
+          set((s) => {
+            const next = s.conversations.map((c) => {
+              if (c.id !== convId) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id !== asstMsgId ? m : { ...m, isStreaming: false }
                 ),
               };
             });

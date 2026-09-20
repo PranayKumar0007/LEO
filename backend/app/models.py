@@ -46,3 +46,29 @@ class UploadedDocument(BaseModel):
     document_id: str
     filename: str
     chunks_indexed: int
+
+
+class OCREngineType(str, Enum):
+    paddleocr_vl = "paddleocr-vl"
+    none = "none"
+
+
+class VisionEngineType(str, Enum):
+    ollama = "ollama"
+    none = "none"
+
+
+class VisionToolConfig(BaseModel):
+    ocr_engine: OCREngineType = OCREngineType.paddleocr_vl
+    ocr_model_path: str = ""
+    vision_engine: VisionEngineType = VisionEngineType.ollama
+    vision_model_name: str = ""
+
+
+class AgentRunRequest(BaseModel):
+    workspace_path: str = Field(min_length=1)
+    goal: str = Field(min_length=1)
+    session_id: str | None = None
+
+
+

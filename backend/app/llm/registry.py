@@ -1,6 +1,26 @@
-from backend.app.models import Domain, ModelConfig
+"""
+LEO Model Registry
+
+Central registry for domain LLMs, OCR models, and Vision-Language models.
+To change any model used in the application, edit the registry variables below.
+"""
+
+from backend.app.models import Domain, ModelConfig, OCREngineType, VisionEngineType, VisionToolConfig
+
+# ----------------------------------------------------------------------
+# 1. OCR & Vision Model Registry (Single Source of Truth)
+# Edit these variables to change the active OCR or Vision models!
+# ----------------------------------------------------------------------
+DEFAULT_OCR_ENGINE = OCREngineType.paddleocr_vl
+DEFAULT_OCR_MODEL = "./models_storage/PaddleOCR-VL-1.6"
+
+DEFAULT_VISION_ENGINE = VisionEngineType.ollama
+DEFAULT_VISION_MODEL = "moondream"
 
 
+# ----------------------------------------------------------------------
+# 2. Domain LLM Registry
+# ----------------------------------------------------------------------
 MODEL_REGISTRY: dict[Domain, ModelConfig] = {
     Domain.general: ModelConfig(
         domain=Domain.general,
@@ -43,3 +63,15 @@ MODEL_REGISTRY: dict[Domain, ModelConfig] = {
 
 def get_model_for_domain(domain: Domain) -> ModelConfig:
     return MODEL_REGISTRY.get(domain, MODEL_REGISTRY[Domain.general])
+
+
+def get_vision_tool_config() -> VisionToolConfig:
+    from backend.app.config import get_settings
+
+    settings = get_settings()
+    return VisionToolConfig(
+        ocr_engine=settings.ocr_engine,
+        ocr_model_path=settings.ocr_model_path,
+        vision_engine=settings.vision_engine,
+        vision_model_name=settings.vision_model_name,
+    )

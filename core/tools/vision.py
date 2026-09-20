@@ -18,6 +18,25 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 
+def _get_default_ocr_model() -> str:
+    try:
+        from backend.app.llm.registry import DEFAULT_OCR_MODEL
+
+        return os.getenv("LEO_OCR_MODEL_PATH") or DEFAULT_OCR_MODEL
+    except Exception:
+        return os.getenv("LEO_OCR_MODEL_PATH", "PaddlePaddle/PaddleOCR-VL-1.6")
+
+
+def _get_default_vision_model() -> str:
+    try:
+        from backend.app.llm.registry import DEFAULT_VISION_MODEL
+
+        return os.getenv("LEO_VISION_MODEL_NAME") or DEFAULT_VISION_MODEL
+    except Exception:
+        return os.getenv("LEO_VISION_MODEL_NAME", "moondream")
+
+
+
 # ----------------------------------------------------------------------
 # Base Model Abstractions
 # ----------------------------------------------------------------------
@@ -56,11 +75,10 @@ class PaddleOCRVLEngine(BaseOCREngine):
         use_gpu: bool = False,
         local_files_only: bool = True,
     ):
-        self.model_name_or_path = model_name_or_path or os.getenv(
-            "LEO_PADDLEOCR_VL_MODEL", "PaddlePaddle/PaddleOCR-VL-1.6"
-        )
+        self.model_name_or_path = model_name_or_path or _get_default_ocr_model()
         self.use_gpu = use_gpu
         self.local_files_only = local_files_only
+
         self._processor = None
         self._model = None
         self._load_failed = False
@@ -72,7 +90,20 @@ class PaddleOCRVLEngine(BaseOCREngine):
 
         try:
             import torch
-            from transformers import AutoModelForImageTextToText, AutoProcessor
+            from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoProcessor
+
+            # Transformers 5.x compatibility patch for PaddleOCR-VL custom RoPE scaling
+            try:
+                from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
+                try:
+                    from transformers.modeling_rope_utils import _init_default_rope
+                except ImportError:
+                    _init_default_rope = None
+
+                if "default" not in ROPE_INIT_FUNCTIONS:
+                    ROPE_INIT_FUNCTIONS["default"] = _init_default_rope or (lambda config, device, **kwargs: (None, None))
+            except Exception:
+                pass
 
             device = "cuda" if (self.use_gpu and torch.cuda.is_available()) else "cpu"
             torch_dtype = (
@@ -84,16 +115,30 @@ class PaddleOCRVLEngine(BaseOCREngine):
                 trust_remote_code=True,
                 local_files_only=self.local_files_only,
             )
-            self._model = (
-                AutoModelForImageTextToText.from_pretrained(
-                    self.model_name_or_path,
-                    trust_remote_code=True,
-                    torch_dtype=torch_dtype,
-                    local_files_only=self.local_files_only,
+
+            try:
+                self._model = (
+                    AutoModelForCausalLM.from_pretrained(
+                        self.model_name_or_path,
+                        trust_remote_code=True,
+                        torch_dtype=torch_dtype,
+                        local_files_only=self.local_files_only,
+                    )
+                    .to(device)
+                    .eval()
                 )
-                .to(device)
-                .eval()
-            )
+            except Exception:
+                self._model = (
+                    AutoModelForImageTextToText.from_pretrained(
+                        self.model_name_or_path,
+                        trust_remote_code=True,
+                        torch_dtype=torch_dtype,
+                        local_files_only=self.local_files_only,
+                    )
+                    .to(device)
+                    .eval()
+                )
+
 
         except Exception as exc:
             self._load_failed = True
@@ -135,11 +180,13 @@ class OllamaMoondreamEngine(BaseVisionEngine):
         self,
         ollama_url: Optional[str] = None,
         model_name: Optional[str] = None,
-        timeout: float = 60.0,
+        timeout: Optional[float] = None,
     ):
         self.ollama_url = (ollama_url or os.getenv("LEO_OLLAMA_BASE_URL", "http://127.0.0.1:11434")).rstrip("/")
-        self.model_name = model_name or os.getenv("LEO_VISION_MODEL", "moondream")
-        self.timeout = timeout
+        self.model_name = model_name or _get_default_vision_model()
+        self.timeout = timeout if timeout is not None else float(os.getenv("LEO_VISION_TIMEOUT", "300.0"))
+
+
 
     def analyze(self, image: Union[Image.Image, Path, str], prompt: Optional[str] = None) -> str:
         default_prompt = (

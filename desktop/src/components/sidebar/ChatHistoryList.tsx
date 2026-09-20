@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Folder } from "lucide-react";
 import { useChatStore } from "../../stores/chatStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { HistoryItem } from "./HistoryItem";
@@ -59,12 +59,21 @@ function groupConversations(conversations: Conversation[]): ConversationGroup[] 
 export function ChatHistoryList() {
   const conversations = useChatStore((s) => s.conversations);
   const createNewConversation = useChatStore((s) => s.createNewConversation);
-  const { setActivePage } = useWorkspaceStore();
+  const { setActivePage, activeProject } = useWorkspaceStore();
 
-  const groups = useMemo(() => groupConversations(conversations), [conversations]);
+  // Filter conversations matching active project context
+  const filteredConversations = useMemo(() => {
+    if (activeProject) {
+      return conversations.filter((c) => c.projectId === activeProject.id);
+    } else {
+      return conversations.filter((c) => !c.projectId);
+    }
+  }, [conversations, activeProject]);
+
+  const groups = useMemo(() => groupConversations(filteredConversations), [filteredConversations]);
 
   const handleNewChat = () => {
-    createNewConversation();
+    createNewConversation(activeProject?.id, activeProject?.name);
     setActivePage("chat");
   };
 
@@ -76,6 +85,22 @@ export function ChatHistoryList() {
       minHeight: 0,
       overflow: "hidden",
     }}>
+      {/* Current Scope Banner */}
+      <div style={{
+        padding: "6px 12px 2px",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 11,
+        color: "var(--text-3)",
+        fontWeight: 500,
+      }}>
+        <Folder size={12} style={{ color: activeProject ? "var(--accent)" : "var(--text-3)" }} />
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {activeProject ? activeProject.name : "No Project Mode"}
+        </span>
+      </div>
+
       {/* New Chat button */}
       <button
         onClick={handleNewChat}
@@ -122,7 +147,7 @@ export function ChatHistoryList() {
             color: "var(--text-3)",
             fontSize: 11,
           }}>
-            No conversations yet
+            No chats in {activeProject ? `'${activeProject.name}'` : "No Project"}
           </div>
         ) : (
           groups.map((group) => (

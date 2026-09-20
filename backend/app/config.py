@@ -21,6 +21,17 @@ class Settings(BaseSettings):
     chunk_overlap: int = 180
     retrieval_top_k: int = 5
 
+    # OCR & Vision Model Configuration (Overridable via .env or registry.py)
+    ocr_engine: str = "paddleocr-vl"
+    ocr_model_path: str = ""
+
+    vision_engine: str = "ollama"
+    vision_model_name: str = ""
+
+    # Selective OCR Activation Settings for PDFs
+    pdf_ocr_fallback: bool = True
+    pdf_ocr_min_chars: int = 30
+
     class Config:
         env_file = ".env"
         env_prefix = "LEO_"
@@ -28,6 +39,13 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    from backend.app.llm.registry import DEFAULT_OCR_MODEL, DEFAULT_VISION_MODEL
+
     settings = Settings()
+    if not settings.ocr_model_path:
+        settings.ocr_model_path = DEFAULT_OCR_MODEL
+    if not settings.vision_model_name:
+        settings.vision_model_name = DEFAULT_VISION_MODEL
+
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     return settings

@@ -6,6 +6,7 @@ import { useDocumentStore } from "../stores/documentStore";
 import { MessageItem } from "../components/chat/MessageItem";
 import { AttachMenu } from "../components/attachments/AttachMenu";
 import { AttachmentChip } from "../components/attachments/AttachmentChip";
+import { ProjectSelector } from "../components/workspace/ProjectSelector";
 import type { LucideIcon } from "lucide-react";
 
 type HeroPrompt = {
@@ -51,8 +52,8 @@ const HERO_PROMPTS: HeroPrompt[] = [
 export function ChatPage() {
   const [input, setInput] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
-  const { messages, isStreaming, error, sendMessage, stopStreaming, clearConversation } = useChatStore();
-  const { toggleInspector } = useWorkspaceStore();
+  const { messages, isStreaming, error, sendMessage, sendAgentMessage, stopStreaming, clearConversation } = useChatStore();
+  const { toggleInspector, activeProject } = useWorkspaceStore();
   const { documents, selectedDocIds, toggleDocSelection } = useDocumentStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const textRef   = useRef<HTMLTextAreaElement>(null);
@@ -90,8 +91,13 @@ export function ChatPage() {
     const q = input.trim();
     if (!q || isStreaming) return;
     setInput("");
-    sendMessage(q, undefined, (ctrl) => { abortRef.current = ctrl; }, selectedDocIds);
-  }, [input, isStreaming, sendMessage, selectedDocIds]);
+
+    if (activeProject) {
+      sendAgentMessage(q, activeProject.path, { id: activeProject.id, name: activeProject.name }, (ctrl) => { abortRef.current = ctrl; });
+    } else {
+      sendMessage(q, undefined, (ctrl) => { abortRef.current = ctrl; }, selectedDocIds);
+    }
+  }, [input, isStreaming, activeProject, sendAgentMessage, sendMessage, selectedDocIds]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -118,26 +124,33 @@ export function ChatPage() {
       position: "relative",
       background: "var(--bg-app)",
     }}>
-      {/* ── Top toolbar (visible when messages exist) ── */}
-      {!isEmpty && (
-        <div style={{
-          height: 48,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 22px",
-          borderBottom: "1px solid var(--border)",
-          flexShrink: 0,
-        }}>
-          <span style={{ fontWeight: 500, fontSize: 13, color: "var(--text-2)" }}>
-            Thread
+      {/* ── Top Header Toolbar with Project Selector (always visible) ── */}
+      <div style={{
+        height: 48,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "0 22px",
+        borderBottom: "1px solid var(--border)",
+        flexShrink: 0,
+        zIndex: 10,
+      }}>
+        {/* Left: Project Selector dropdown matching screenshot */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <ProjectSelector />
+          <span style={{ fontSize: 11, color: activeProject ? "var(--accent)" : "var(--text-3)", background: "rgba(255,255,255,0.04)", padding: "2px 8px", borderRadius: 4 }}>
+            {activeProject ? "Agentic Mode" : "No Project Mode"}
           </span>
-          <div style={{ display: "flex", gap: 6 }}>
-            <TopBarBtn Icon={Search} label="Inspect" onClick={toggleInspector} />
-            <TopBarBtn Icon={Trash2} label="Clear chat" onClick={clearConversation} danger />
-          </div>
         </div>
-      )}
+
+        {/* Right: Actions */}
+        <div style={{ display: "flex", gap: 6 }}>
+          <TopBarBtn Icon={Search} label="Inspect" onClick={toggleInspector} />
+          {!isEmpty && (
+            <TopBarBtn Icon={Trash2} label="Clear chat" onClick={clearConversation} danger />
+          )}
+        </div>
+      </div>
 
       {/* ── Centre region: hero or thread ── */}
       <div style={{
@@ -171,10 +184,12 @@ export function ChatPage() {
               fontSize: 13,
               marginBottom: 36,
               textAlign: "center",
-              maxWidth: 340,
+              maxWidth: 380,
               lineHeight: 1.6,
             }}>
-              Local-first AI for research, code, and clinical reasoning — entirely on-premises.
+              {activeProject
+                ? `Agentic Workspace: Operating on '${activeProject.name}'`
+                : "Local-first AI workbench — select a project for Agentic Coding or ask general queries."}
             </p>
 
             {/* Quick-start cards */}
@@ -268,13 +283,13 @@ export function ChatPage() {
             </div>
           )}
 
-          {/* Top: textarea — text starts top-left, exactly like Codex "Do anything" */}
+          {/* Top: textarea */}
           <textarea
             ref={textRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Ask LEO anything…"
+            placeholder={activeProject ? `Ask LEO to edit or answer about '${activeProject.name}'…` : "Ask LEO anything…"}
             disabled={isStreaming}
             rows={2}
             style={{
@@ -296,7 +311,7 @@ export function ChatPage() {
             }}
           />
 
-          {/* Bottom toolbar — mirrors Codex's bottom action row */}
+          {/* Bottom toolbar */}
           <div style={{
             display: "flex",
             alignItems: "center",

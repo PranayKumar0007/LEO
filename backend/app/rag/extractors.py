@@ -19,14 +19,17 @@ def extract_text(path: Path) -> list[dict]:
 
 
 def _extract_pdf(path: Path) -> list[dict]:
+    from backend.app.config import get_settings
+
+    settings = get_settings()
     pages: list[dict] = []
     with pdfplumber.open(path) as pdf:
         for index, page in enumerate(pdf.pages, start=1):
             text = page.extract_text() or ""
             text_clean = text.strip()
 
-            # If digital PDF text is present and substantial, use it
-            if len(text_clean) >= 30:
+            # If digital PDF text is present and substantial, use it (OCR/Vision skipped for speed)
+            if len(text_clean) >= settings.pdf_ocr_min_chars or not settings.pdf_ocr_fallback:
                 pages.append({"text": text_clean, "page": index, "section": "Document Page"})
             else:
                 # Scanned or image-heavy PDF page: render page to image & run vision/OCR pipeline
@@ -38,10 +41,10 @@ def _extract_pdf(path: Path) -> list[dict]:
                         combined_text = text_clean or "[Blank Page]"
                     pages.append({"text": combined_text, "page": index, "section": "Scanned/Diagram Page"})
                 except Exception as exc:
-                    # Fallback to whatever text was extracted or error message
                     fallback = text_clean or f"[PDF Page rendering failed: {exc}]"
                     pages.append({"text": fallback, "page": index, "section": "Page Extraction Fallback"})
     return pages
+
 
 
 def _extract_image(path: Path) -> list[dict]:

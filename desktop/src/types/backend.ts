@@ -62,4 +62,12 @@ export type SSEEvent =
   | { type: "model"; data: ModelConfig }
   | { type: "token"; data: { text: string } }
   | { type: "error"; data: { message: string } }
-  | { type: "done"; data: Record<string, never> };
+  | { type: "done"; data: Record<string, never> }
+  | { type: "repository_context"; data: any }
+  | { type: "plan_created"; data: any }
+  | { type: "todo_updated"; data: any }
+  | { type: "file_written"; data: any }
+  | { type: "command_finished"; data: any }
+  | { type: "verification_result"; data: any }
+  | { type: "agent_finished"; data: any }
+  | { type: "agent_error"; data: any };
